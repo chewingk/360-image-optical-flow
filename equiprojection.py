@@ -27,7 +27,7 @@ def cart2bary(p0, p1, p2, r):
     xmx3 = r[0] - p2[0]
     ymy3 = r[1] - p2[1]
 
-    lambda1 = (y2my3 * xmx3 + x3mx2 * ymy3) / (y2my3 * x1mx3 + x3mx2 * y1my3)
+    lambda1 = (y2my3 * xmx3  + x3mx2 * ymy3) / (y2my3 * x1mx3 + x3mx2 * y1my3)
     lambda2 = (x1mx3 * ymy3 - y1my3 * xmx3) / (y2my3 * x1mx3 + x3mx2 * y1my3)
     lambda3 = 1 - lambda1 - lambda2
 

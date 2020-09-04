@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from barymap import getImageTriangle
+from gettriangleimage import getImageTriangle, getImageBary
 
 # I have a equi image
 # equi = cv2.imread('')
@@ -110,16 +110,32 @@ vertexp = np.array([[0, np.pi/3],
                     [-0.2*np.pi, 0],
                     [0.6*np.pi, 0]])
 
+# Mid flip
+# baryexp = np.array([[0.4*np.pi, np.pi/3],
+#                     [0.8*np.pi, np.pi/3],
+#                     [0.6*np.pi, np.pi/1.5]])
+# Bot
+# baryexp = np.array([[0.6*np.pi, np.pi/1.5],
+#                     [np.pi, np.pi/1.5],
+#                     [0.8*np.pi, np.pi]])
+# Top
+baryexp = np.array([[0.6*np.pi, 0],
+                    [0.4*np.pi, np.pi/3],
+                    [0.8*np.pi, np.pi/3]])
+# For bary triangles
+out1 = getImageBary(baryexp, readin1, flip=False)
+out2 = getImageBary(baryexp, readin2, flip=False)
+
 # For poles
 # out1 = lalaa(vertexp, h, w, readin1, pole=True, tri0theta=0.2*np.pi, tri2theta=np.pi)
 # out2 = lalaa(vertexp, h, w, readin2, pole=True, tri0theta=0.2*np.pi, tri2theta=np.pi)
 # For ^ triangle
-out1 = getImageTriangle(vertexp, h, w, readin1)
-out2 = getImageTriangle(vertexp, h, w, readin2)
+# out1 = getImageTriangle(vertexp, h, w, readin1)
+# out2 = getImageTriangle(vertexp, h, w, readin2)
 # For V triangle (flip)
 # out1 = getImageTriangle(vertexp, h, w, readin1, flip=True)
 # out2 = getImageTriangle(vertexp, h, w, readin2, flip=True)
 # cv2.imwrite('lalaa3.jpg', out1)
 # cv2.imwrite('lalaa4.jpg', out2)
-cv2.imwrite('lalaa5.jpg', out1)
-cv2.imwrite('lalaa6.jpg', out2)
+cv2.imwrite('lalaa5bary.jpg', out1)
+cv2.imwrite('lalaa6bary.jpg', out2)

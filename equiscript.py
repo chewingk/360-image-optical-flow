@@ -5,6 +5,7 @@ from scipy.spatial import Delaunay
 from topimage import topImageFlow
 from midimage import midImageFlow
 from botimage import botImageFlow
+import barymap
 import flow_vis as fv
 
 # vertex = np.array([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [0.5, 1], [1.5, 1], [2.5, 1], [3.5, 1], [4.5, 1]])
@@ -64,16 +65,19 @@ w = 960
 
 readin1 = cv2.imread("optical_flow_gt/0001_rgb.jpg")
 readin2 = cv2.imread("optical_flow_gt/0002_rgb.jpg")
+#
+# dirName = "testout/"
+# topflow = topImageFlow(readin1, readin2, 200, 200, False)
+# midflow = midImageFlow(readin1, readin2, 200, 200, True)
+# botflow = botImageFlow(readin1, readin2, 200, 200, True)
+#
+# for idx, f in enumerate(topflow):
+#     cv2.imwrite(f"{dirName}top{idx}.jpg", fv.flow_to_color(topflow[idx]))
+# for idx, f in enumerate(midflow):
+#     cv2.imwrite(f"{dirName}mid{idx}.jpg", fv.flow_to_color(midflow[idx]))
+# for idx, f in enumerate(botflow):
+#     cv2.imwrite(f"{dirName}bot{idx}.jpg", fv.flow_to_color(botflow[idx]))
+#
 
-dirName = "testout/"
-topflow = topImageFlow(readin1, readin2, 200, 200)
-midflow = midImageFlow(readin1, readin2, 200, 200)
-botflow = botImageFlow(readin1, readin2, 200, 200)
-
-for idx, f in enumerate(topflow):
-    cv2.imwrite(f"{dirName}top{idx}.jpg", fv.flow_to_color(topflow[idx]))
-for idx, f in enumerate(midflow):
-    cv2.imwrite(f"{dirName}mid{idx}.jpg", fv.flow_to_color(midflow[idx]))
-for idx, f in enumerate(botflow):
-    cv2.imwrite(f"{dirName}bot{idx}.jpg", fv.flow_to_color(botflow[idx]))
-
+fff = barymap.equiImg2EquiFlowBary(readin1, readin2)
+cv2.imwrite("testout/aaaaaa.jpg", fv.flow_to_color(fff))

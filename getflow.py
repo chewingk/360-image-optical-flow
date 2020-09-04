@@ -4,13 +4,13 @@ from midimage import midImageFlow
 from botimage import botImageFlow
 
 
-def getFlowSet(img1, img2, h, w):
+def getFlowSet(img1, img2, h, w, bary):
     # h and w are the height and width of flow images
     # not original equi image
     flowSet = list()
-    flowSet.append(topImageFlow(img1, img2, h, w))
-    flowSet.append(midImageFlow(img1, img2, h, w))
-    flowSet.append(botImageFlow(img1, img2, h, w))
+    flowSet.append(topImageFlow(img1, img2, h, w, bary))
+    flowSet.append(midImageFlow(img1, img2, h, w, bary))
+    flowSet.append(botImageFlow(img1, img2, h, w, bary))
     return flowSet
 
 
