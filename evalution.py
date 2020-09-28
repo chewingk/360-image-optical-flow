@@ -5,33 +5,15 @@ from visfunction import bilinear_interpolation
 
 
 def endPointError(truthFlow, optFlow):
-    sumEPE = 0
-    height = truthFlow.shape[0]
-    width = truthFlow.shape[1]
-    for row in range(height):
-        for col in range(width):
-            tf = truthFlow[row][col]
-            of = optFlow[row][col]
-            epe = np.linalg.norm(tf - of)
-            # epe = np.sqrt((tf[0] - of[0])**2 + (tf[1] - of[1])**2)
-            sumEPE = sumEPE + epe
-    return sumEPE / (width * height)
+    diffFlow = truthFlow - optFlow
+    diffNorm = np.linalg.norm(diffFlow, axis=2)
+    return np.average(diffNorm)
 
 
 def angularError(truthFlow, optFlow):
-    sumAE = 0
-    height = truthFlow.shape[0]
-    width = truthFlow.shape[1]
-    for row in range(height):
-        for col in range(width):
-            # ae = abs(truthFlow[row][col][1] - optFlow[row][col][1])
-            tf = truthFlow[row][col]
-            of = optFlow[row][col]
-            np.append(tf, 0)
-            np.append(of, 0)
-            ae = np.degrees(angle_between(tf, of))
-            sumAE = sumAE + ae
-    return sumAE / (width * height)
+    dotPro = np.sum(truthFlow*optFlow, axis=2)
+    ae = dotPro / (np.linalg.norm(truthFlow, axis=2) * np.linalg.norm(optFlow, axis=2))
+    return np.rad2deg(np.nanmean(np.arccos(ae)))
 
 
 def frameInterpolation(optFlow, originalImage):
@@ -85,3 +67,21 @@ def angle_between(v1, v2):
     v1_u = unit_vector(v1)
     v2_u = unit_vector(v2)
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+
+def flow_correction(flow):
+    # flow is in UV
+    # u is hori
+    # v is vert
+    h, w = flow.shape[:2]
+    for row in range(h):
+        for col in range(w):
+            hori = flow[row][col][0]
+            vert = flow[row][col][1]
+            # print(hori)
+            if abs(hori) > w/2.0:
+                # print('hihi')
+                flow[row][col][0] = hori - w if hori > 0 else hori + w
+            if abs(vert) > h/2.0:
+                flow[row][col][1] = vert - h if vert > 0 else vert + h
+    return flow
