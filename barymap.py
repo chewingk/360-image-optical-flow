@@ -256,40 +256,70 @@ def getMidVertexArray(h, w):
     return equiVertexArray
 
 
-def getHomographySet(h, w, flowHeight, flowWidth):
-    homographySet = np.zeros([2, 5, 3, 3])
-    # Rectangle: top left, top right, bot right, bot left
-    rectOrientation = np.array([[0, 0], [0, flowWidth-1], [flowHeight-1, flowWidth-1], [flowHeight-1, 0]])
-    # For top tri/rect
-    # Height from 0 to topMark
-    topMark = int(np.ceil(h/3)-1)
-    topVertexArray = np.zeros([5, 4, 2])
-    for topIdx in range(5):
-        # topVertexArray[topIdx] = np.array([[0, int(np.floor(w*0.2*topIdx))],
-        #                                    [0, int(np.floor(w*0.2*(topIdx+1))-1)],
-        #                                    [topMark, int(np.floor(w*0.2*(topIdx+1))-1)],
-        #                                    [topMark, int(np.floor(w*0.2*topIdx))]])
-        tmpArray = np.array([[0, int(np.floor(w*0.2*topIdx))],
-                             [0, int(np.floor(w*0.2*(topIdx+1))-1)],
-                             [topMark, int(np.floor(w*0.2*(topIdx+1))-1)],
-                             [topMark, int(np.floor(w*0.2*topIdx))]])
-        # Inverse for backward mapping
-        homographySet[0][topIdx] = np.linalg.inv(cv2.findHomography(rectOrientation, tmpArray)[0])
-    # For bot tri/rect
-    # Height from botMark to h-1
-    botMark = int(np.ceil(h/1.5))
-    botVertexArray = np.zeros([5, 4, 2])
-    for botIdx in range(5):
-        # botVertexArray[botIdx] = np.array([[botMark, int(np.floor(w*(0.1+0.2*botIdx)))],
-        #                                    [botMark, int(np.floor(w*(0.1+0.2*(botIdx+1)))-1)],
-        #                                    [h-1, int(np.floor(w*(0.1+0.2*(botIdx+1)))-1)],
-        #                                    [h-1, int(np.floor(w*(0.1+0.2*botIdx)))]])
-        tmpArray = np.array([[botMark, int(np.floor(w*(0.1+0.2*botIdx)))],
-                             [botMark, int(np.floor(w*(0.1+0.2*(botIdx+1)))-1)],
-                             [h-1, int(np.floor(w*(0.1+0.2*(botIdx+1)))-1)],
-                             [h-1, int(np.floor(w*(0.1+0.2*botIdx)))]])
-        # Inverse for backward mapping
-        homographySet[1][botIdx] = np.linalg.inv(cv2.findHomography(rectOrientation, tmpArray)[0])
+# def getHomographySet(h, w, flowHeight, flowWidth):
+#     homographySet = np.zeros([2, 5, 3, 3])
+#     # Rectangle: top left, top right, bot right, bot left
+#     rectOrientation = np.array([[0, 0], [0, flowWidth-1], [flowHeight-1, flowWidth-1], [flowHeight-1, 0]])
+#     # For top tri/rect
+#     # Height from 0 to topMark
+#     topMark = int(np.ceil(h/3)-1)
+#     topVertexArray = np.zeros([5, 4, 2])
+#     for topIdx in range(5):
+#         # topVertexArray[topIdx] = np.array([[0, int(np.floor(w*0.2*topIdx))],
+#         #                                    [0, int(np.floor(w*0.2*(topIdx+1))-1)],
+#         #                                    [topMark, int(np.floor(w*0.2*(topIdx+1))-1)],
+#         #                                    [topMark, int(np.floor(w*0.2*topIdx))]])
+#         tmpArray = np.array([[0, int(np.floor(w*0.2*topIdx))],
+#                              [0, int(np.floor(w*0.2*(topIdx+1))-1)],
+#                              [topMark, int(np.floor(w*0.2*(topIdx+1))-1)],
+#                              [topMark, int(np.floor(w*0.2*topIdx))]])
+#         # Inverse for backward mapping
+#         homographySet[0][topIdx] = np.linalg.inv(cv2.findHomography(rectOrientation, tmpArray)[0])
+#     # For bot tri/rect
+#     # Height from botMark to h-1
+#     botMark = int(np.ceil(h/1.5))
+#     botVertexArray = np.zeros([5, 4, 2])
+#     for botIdx in range(5):
+#         # botVertexArray[botIdx] = np.array([[botMark, int(np.floor(w*(0.1+0.2*botIdx)))],
+#         #                                    [botMark, int(np.floor(w*(0.1+0.2*(botIdx+1)))-1)],
+#         #                                    [h-1, int(np.floor(w*(0.1+0.2*(botIdx+1)))-1)],
+#         #                                    [h-1, int(np.floor(w*(0.1+0.2*botIdx)))]])
+#         tmpArray = np.array([[botMark, int(np.floor(w*(0.1+0.2*botIdx)))],
+#                              [botMark, int(np.floor(w*(0.1+0.2*(botIdx+1)))-1)],
+#                              [h-1, int(np.floor(w*(0.1+0.2*(botIdx+1)))-1)],
+#                              [h-1, int(np.floor(w*(0.1+0.2*botIdx)))]])
+#         # Inverse for backward mapping
+#         homographySet[1][botIdx] = np.linalg.inv(cv2.findHomography(rectOrientation, tmpArray)[0])
+#
+#     return homographySet
 
-    return homographySet
+def pointInTriangle(a, b, c, p):
+    n = np.cross((b - a), (c - a))
+    ndotp = np.dot(n, p)
+    if ndotp == 0:
+        return False
+    d = np.dot((a - p), n) / ndotp
+    intersect = p + d * p
+    if np.linalg.norm(intersect - p) > np.linalg.norm(a):
+        return False
+    lam = newcart2bary(a, b, c, intersect)
+    if 0 <= lam[0] <= 1 and 0 <= lam[1] <= 1 and 0 <= lam[2] <= 1:
+        return True
+    return False
+    # lb = intersect - b
+    # lc = intersect - c
+    # diff = np.abs(angle_between(la, lb) + angle_between(lb, lc) + angle_between(lc, la) - np.pi)
+    # # print(diff)
+    # if diff > 0.000001:
+    #     return False
+    # return True
+    # la = intersect - a
 
+
+# def unit_vector(vector):
+#     """ Returns the unit vector of the vector.  """
+#     return vector / np.linalg.norm(vector)
+
+
+def angle_between(v1, v2):
+    return np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
