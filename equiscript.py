@@ -5,8 +5,10 @@ from scipy.spatial import Delaunay
 from topimage import topImageFlow
 from midimage import midImageFlow
 from botimage import botImageFlow
+from evalution import endPointError, flow_correction, angularError, frameInterpolation
 import barymap
 import flow_vis as fv
+from flowio import readFlowFile
 
 # vertex = np.array([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [0.5, 1], [1.5, 1], [2.5, 1], [3.5, 1], [4.5, 1]])
 # tri = Delaunay(vertex)
@@ -63,8 +65,8 @@ w = 960
 #
 # print(botVertexArray)
 
-readin1 = cv2.imread("optical_flow_gt/0001_rgb.jpg")
-readin2 = cv2.imread("optical_flow_gt/0002_rgb.jpg")
+readin1 = cv2.imread("GTFlow/hotel/0001_rgb.jpg")
+readin2 = cv2.imread("GTFlow/hotel/0002_rgb.jpg")
 #
 # dirName = "testout/"
 # topflow = topImageFlow(readin1, readin2, 200, 200, False)
@@ -78,6 +80,18 @@ readin2 = cv2.imread("optical_flow_gt/0002_rgb.jpg")
 # for idx, f in enumerate(botflow):
 #     cv2.imwrite(f"{dirName}bot{idx}.jpg", fv.flow_to_color(botflow[idx]))
 #
+filename = 'GTFlow/room1/0001_opticalflow_forward.flo'
+img1gray = cv2.cvtColor(readin1, cv2.COLOR_RGB2GRAY)
+img2gray = cv2.cvtColor(readin2, cv2.COLOR_RGB2GRAY)
 
-fff = barymap.equiImg2EquiFlowBary(readin1, readin2)
+# fff = barymap.equiImg2EquiFlowBary(readin1, readin2)
+fff = barymap.equiImg2EquiFlowBary(img1gray, img2gray)
+correctedGT = flow_correction(readFlowFile(filename))
+calcf = flow_correction(fff)
+epe = endPointError(correctedGT, calcf)
+ae = angularError(correctedGT, calcf)
+print(epe)
+print(ae)
 cv2.imwrite("testout/aaaaaa.jpg", fv.flow_to_color(fff))
+out = frameInterpolation(fff, readin1)
+cv2.imwrite("testout/abcdefg.jpg", out)

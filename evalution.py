@@ -27,7 +27,7 @@ def frameInterpolation(optFlow, originalImage):
             targetRow = row + 0.5 * optFlow[row][col][1]
             targetCol = col + 0.5 * optFlow[row][col][0]
             if (0 <= targetCol < colSize-1) and (0 <= targetRow < rowSize-1):
-                bVals = bilinear_interpolation(targetRow, targetCol)
+                bVals = bilinear_interpolation(targetRow, targetCol, rowSize, colSize)
                 for rgb in range(rgbSize):
                     interpolatedImage[row][col][rgb] = originalImage[int(bVals[0])][int(bVals[2])][rgb] * bVals[4] + \
                                                        originalImage[int(bVals[0])][int(bVals[3])][rgb] * bVals[5] + \

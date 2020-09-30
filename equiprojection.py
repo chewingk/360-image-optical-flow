@@ -1,4 +1,6 @@
 import numpy as np
+from numpy import cos, sin, arctan2, arccos
+
 import cv2
 from icosaherdron import Triangle, BaryVertices, CartVertices, SphereVertices
 
@@ -14,7 +16,7 @@ def sphere2equi(h, w, vertex):
 def equi2sphere(h, w, r, c):
     theta = 2 * np.pi * c / w
     thi = np.pi * r / h
-    return [theta, thi]
+    return np.array([theta, thi])
 
 
 def cart2bary(p0, p1, p2, r):
@@ -40,10 +42,10 @@ def bary2cart(triangle, bary):
     return CartVertices(x, y)
 
 
-def newcart2bary(p1, p2, p3, r):
-    v0 = p2 - p1
-    v1 = p3 - p1
-    v2 = r - p1
+def newcart2bary(p0, p1, p2, r):
+    v0 = p1 - p0
+    v1 = p2 - p0
+    v2 = r - p0
 
     d00 = np.dot(v0, v0)
     d01 = np.dot(v0, v1)
@@ -57,3 +59,46 @@ def newcart2bary(p1, p2, p3, r):
     u = 1.0 - v - w
 
     return np.array([u, v, w])
+
+
+def equibaryPreProcess(h, w, p0, p1, p2):
+    sph0 = equi2sphere(h, w, p0[0], p0[1])
+    sph1 = equi2sphere(h, w, p1[0], p1[1])
+    sph2 = equi2sphere(h, w, p2[0], p2[1])
+    cart0 = sphere2cart(sph0[0], sph0[1])
+    cart1 = sphere2cart(sph1[0], sph1[1])
+    cart2 = sphere2cart(sph2[0], sph2[1])
+    return np.array([cart0, cart1, cart2])
+
+
+def equiCoor2bary(h, w, cart0, cart1, cart2, p):
+    sphP = equi2sphere(h, w, p[0], p[1])
+    cartP = sphere2cart(sphP[0], sphP[1])
+    d = pointIntersection(cart0, cart1, cart2, cartP)
+    cartP = cartP + cartP * d
+    ###################################
+    # Need to convert is onto the triangle plane
+    ##################################
+    return newcart2bary(cart0, cart1, cart2, cartP)
+
+
+def bary2equiCoor(h, w, cart0, cart1, cart2, endLambda):
+    cartP = cart0 * endLambda[0] + cart1 * endLambda[1] + cart2 * endLambda[2]
+    cartP = cartP / np.linalg.norm(cartP)
+    sphP = cart2sphere(cartP[0], cartP[1], cartP[2])
+    return sphere2equi(h, w, sphP)
+
+
+def cart2sphere(x, y, z):
+    # print(z)
+    mag = np.linalg.norm([x, y, z])
+    return np.array([arctan2(y/mag, x/mag), arccos(z/mag)])
+
+
+def sphere2cart(theta, thi):
+    return np.array([sin(thi)*cos(theta), sin(thi)*sin(theta), cos(thi)])
+
+
+def pointIntersection(a, b, c, p):
+    n = np.cross((b - a), (c - a))
+    return np.dot(a - p, n) / np.dot(p, n)

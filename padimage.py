@@ -3,8 +3,8 @@ import numpy as np
 import sys
 
 
-def padimage(image):
-    img_in = cv2.imread(image)
+def padimage(img_in):
+    # img_in = cv2.imread(image)
     width = img_in.shape[1]
     pad_width = int(width / 4.0)
 
