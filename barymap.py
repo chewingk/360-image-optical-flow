@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from scipy.spatial import Delaunay
-from equiprojection import sphere2equi, cart2bary
+from equiprojection import sphere2equi, newcart2bary, equiCoor2bary, equibaryPreProcess, bary2equiCoor
 from visfunction import bilinear_interpolation
 from getflow import getFlowSet
 
@@ -9,31 +9,37 @@ from getflow import getFlowSet
 def equiImg2EquiFlowBary(img1, img2):
     h = img1.shape[0]
     w = img2.shape[1]
+    topMar = (np.pi/2 - np.arctan(0.5)) / np.pi * h
+    botMar = (np.pi/2 + np.arctan(0.5)) / np.pi * h
     finalFlow = np.zeros([h, w, 2])
     equiVertexArray = getMidVertexArray(h, w)
     tri = Delaunay(equiVertexArray)
     triArray = tri.simplices
-    flowHeight = 240
-    flowWidth = 240
+    # flowHeight = 240
+    # flowWidth = 240
+    flowHeight = 300
+    flowWidth = 300
     flowSet = getFlowSet(img1, img2, flowHeight, flowWidth, True)
     # There are padding in the cropped images
-    triOrientation = np.array([[[19, 119], [219, 19], [219, 219]],
-                               [[19, 19], [19, 219], [219, 119]]])
+    # triOrientation = np.array([[[19, 119], [219, 19], [219, 219]],
+    #                            [[19, 19], [19, 219], [219, 119]]])
+    triOrientation = np.array([[[49, 149], [249, 49], [249, 249]],
+                               [[49, 49], [49, 249], [249, 149]]])
 
     for y in range(h):
         for x in range(w):
             # NP
-            if y < h/3:
+            if y < topMar:
                 rectImage = detRect(x, w, True)
                 rectVertex = getRectVertex(rectImage, True, h, w)
                 curX = x
                 curY = y
                 p = np.array([curY, curX])
-                finalFlow[y][x] = findFlowValue(p, rectVertex[0], rectVertex[1], rectVertex[2],
+                finalFlow[y][x] = findFlowValue(h, w, p, rectVertex[0], rectVertex[1], rectVertex[2],
                                                 triOrientation[0][0], triOrientation[0][1], triOrientation[0][2],
                                                 flowSet[0][rectImage])
             # SP
-            elif y >= h/1.5:
+            elif y >= botMar:
                 rectImage = detRect(x, w, False)
                 curX = x
                 curY = y
@@ -45,84 +51,84 @@ def equiImg2EquiFlowBary(img1, img2):
                     curX = curX + w
                 rectVertex = getRectVertex(rectImage, False, h, w)
                 p = np.array([curY, curX])
-                finalFlow[y][x] = findFlowValue(p, rectVertex[0], rectVertex[1], rectVertex[2],
+                finalFlow[y][x] = findFlowValue(h, w, p, rectVertex[0], rectVertex[1], rectVertex[2],
                                                 triOrientation[1][0], triOrientation[1][1], triOrientation[1][2],
                                                 flowSet[2][rectImage])
             # Mid
             # The same as non-bary
-            elif h / 3 <= y < h / 1.5:
+            elif topMar <= y < botMar:
                 p = np.array([y, x])
                 index = tri.find_simplex(p)
                 # Find which image this pixel belongs to
                 triImage = detTri(triArray[index])
-                finalFlow[y][x] = getMidFinalFlow(p, flowSet, triImage, equiVertexArray, triOrientation)
+                finalFlow[y][x] = getMidFinalFlow(h, w, p, flowSet, triImage, equiVertexArray, triOrientation)
 
     return finalFlow
 
 
-def equiImg2EquiFlow(img1, img2):
-    h = img1.shape[0]
-    w = img1.shape[1]
-    finalFlow = np.zeros((h, w, 2))
-    # For mid triangles
-    # POINTS SHOULD BE CONVERTED FROM SPHERE COORDINATE!!!!!!!!!!!!!!!!!!!
-    # topThi = np.pi / 3
-    # botThi = np.pi / 1.5
-    # intervalTheta = np.pi / 5
-    # equiVertexArray = np.zeros([13, 2])
-    # for vIdx in range(6):
-    #     equiVertexArray[vIdx] = sphere2equi(h, w, np.array([vIdx*2*intervalTheta, topThi]))
-    # for vIdx in range(6, 11):
-    #     equiVertexArray[vIdx] = sphere2equi(h, w, np.array([((vIdx-6)*2+1)*intervalTheta, botThi]))
-    # equiVertexArray[11] = sphere2equi(h, w, np.array([-1*intervalTheta, botThi]))
-    # equiVertexArray[12] = sphere2equi(h, w, np.array([11*intervalTheta, botThi]))
-    equiVertexArray = getMidVertexArray(h, w)
-    flowHeight = 200
-    flowWidth = 200
-    flowSet = getFlowSet(img1, img2, flowHeight, flowWidth, False)
-    # For top and bot
-    homographySet = getHomographySet(h, w, flowHeight, flowWidth)
-    triOrientation = np.array([[[0, 0], [0, flowWidth-1], [flowHeight-1, int(flowWidth/2)]],
-                               [[0, int(flowWidth/2)], [flowHeight-1, 0], [flowHeight-1, flowWidth-1]]])
-    tri = Delaunay(equiVertexArray)
-    triArray = tri.simplices
-    for y in range(h):
-        for x in range(w):
-            # NP
-            if y < h/3:
-                rectImage = detRect(x, w, True)
-                curX = x
-                curY = y
-                curVer = np.array([curY, curX, 1])
-                flowVer = np.matmul(homographySet[0][rectImage], curVer)
-                equiEndPoint = findRectFlowEndPoint(flowVer[0], flowVer[1],
-                                                    flowSet[0][rectImage], homographySet[0][rectImage])
-                finalFlow[y][x] = np.array([equiEndPoint[0]-y, equiEndPoint[1]-x])
-            # SP
-            elif y >= h/1.5:
-                rectImage = detRect(x, w, False)
-                curX = x
-                curY = y
-                # It can be negative (on the left)
-                # Should add w to x when doing warping
-                # i.e. x = x + w
-                if rectImage < 0:
-                    rectImage = rectImage + 5
-                    curX = curX + w
-                curVer = np.array([curY, curX, 1])
-                flowVer = np.matmul(homographySet[1][rectImage], curVer)
-                equiEndPoint = findRectFlowEndPoint(flowVer[0], flowVer[1],
-                                                    flowSet[2][rectImage], homographySet[1][rectImage])
-                finalFlow[y][x] = np.array([equiEndPoint[0]-y, equiEndPoint[1]-x])
-
-            # Mid
-            elif h/3 <= y < h/1.5:
-                p = np.array([y, x])
-                index = tri.find_simplex(p)
-                # Find which image this pixel belongs to
-                triImage = detTri(triArray[index])
-                finalFlow[y][x] = getMidFinalFlow(p, flowSet, triImage, equiVertexArray, triOrientation)
-    return finalFlow
+# def equiImg2EquiFlow(img1, img2):
+#     h = img1.shape[0]
+#     w = img1.shape[1]
+#     finalFlow = np.zeros((h, w, 2))
+#     # For mid triangles
+#     # POINTS SHOULD BE CONVERTED FROM SPHERE COORDINATE!!!!!!!!!!!!!!!!!!!
+#     # topThi = np.pi / 3
+#     # botThi = np.pi / 1.5
+#     # intervalTheta = np.pi / 5
+#     # equiVertexArray = np.zeros([13, 2])
+#     # for vIdx in range(6):
+#     #     equiVertexArray[vIdx] = sphere2equi(h, w, np.array([vIdx*2*intervalTheta, topThi]))
+#     # for vIdx in range(6, 11):
+#     #     equiVertexArray[vIdx] = sphere2equi(h, w, np.array([((vIdx-6)*2+1)*intervalTheta, botThi]))
+#     # equiVertexArray[11] = sphere2equi(h, w, np.array([-1*intervalTheta, botThi]))
+#     # equiVertexArray[12] = sphere2equi(h, w, np.array([11*intervalTheta, botThi]))
+#     equiVertexArray = getMidVertexArray(h, w)
+#     flowHeight = 200
+#     flowWidth = 200
+#     flowSet = getFlowSet(img1, img2, flowHeight, flowWidth, False)
+#     # For top and bot
+#     homographySet = getHomographySet(h, w, flowHeight, flowWidth)
+#     triOrientation = np.array([[[0, 0], [0, flowWidth-1], [flowHeight-1, int(flowWidth/2)]],
+#                                [[0, int(flowWidth/2)], [flowHeight-1, 0], [flowHeight-1, flowWidth-1]]])
+#     tri = Delaunay(equiVertexArray)
+#     triArray = tri.simplices
+#     for y in range(h):
+#         for x in range(w):
+#             # NP
+#             if y < h/3:
+#                 rectImage = detRect(x, w, True)
+#                 curX = x
+#                 curY = y
+#                 curVer = np.array([curY, curX, 1])
+#                 flowVer = np.matmul(homographySet[0][rectImage], curVer)
+#                 equiEndPoint = findRectFlowEndPoint(flowVer[0], flowVer[1],
+#                                                     flowSet[0][rectImage], homographySet[0][rectImage])
+#                 finalFlow[y][x] = np.array([equiEndPoint[0]-y, equiEndPoint[1]-x])
+#             # SP
+#             elif y >= h/1.5:
+#                 rectImage = detRect(x, w, False)
+#                 curX = x
+#                 curY = y
+#                 # It can be negative (on the left)
+#                 # Should add w to x when doing warping
+#                 # i.e. x = x + w
+#                 if rectImage < 0:
+#                     rectImage = rectImage + 5
+#                     curX = curX + w
+#                 curVer = np.array([curY, curX, 1])
+#                 flowVer = np.matmul(homographySet[1][rectImage], curVer)
+#                 equiEndPoint = findRectFlowEndPoint(flowVer[0], flowVer[1],
+#                                                     flowSet[2][rectImage], homographySet[1][rectImage])
+#                 finalFlow[y][x] = np.array([equiEndPoint[0]-y, equiEndPoint[1]-x])
+#
+#             # Mid
+#             elif h/3 <= y < h/1.5:
+#                 p = np.array([y, x])
+#                 index = tri.find_simplex(p)
+#                 # Find which image this pixel belongs to
+#                 triImage = detTri(triArray[index])
+#                 finalFlow[y][x] = getMidFinalFlow(h, w, p, flowSet, triImage, equiVertexArray, triOrientation)
+#     return finalFlow
 
 
 def getRectVertex(rectIdx, top, h, w):
@@ -180,14 +186,16 @@ def detTri(indices):
 
 
 # For finding triangles using bary
-def findFlowValue(equiCurVer, equiVer0, equiVer1, equiVer2, flowVer0, flowVer1, flowVer2, flow):
+def findFlowValue(imgHeight, imgWidth, equiCurVer, equiVer0, equiVer1, equiVer2, flowVer0, flowVer1, flowVer2, flow):
     # Vertex in [x, y] format
-    lambdaVal = cart2bary(equiVer0, equiVer1, equiVer2, equiCurVer)
+    cart0, cart1, cart2 = equibaryPreProcess(imgHeight, imgWidth, equiVer0, equiVer1, equiVer2)
+    # lambdaVal = newcart2bary(equiVer0, equiVer1, equiVer2, equiCurVer)
+    lambdaVal = equiCoor2bary(imgHeight, imgWidth, cart0, cart1, cart2, equiCurVer)
     # Use lambda to get coordinate in flow matrix
     startPoint = lambdaVal[0] * flowVer0 + lambdaVal[1] * flowVer1 + lambdaVal[2] * flowVer2
     [h, w] = flow.shape[:2]
     # Get coefficient for bilinear interpolation
-    print(f'{equiCurVer}, {startPoint[0]}, {startPoint[1]}, {h}, {w}')
+    # print(f'{equiCurVer}, {startPoint[0]}, {startPoint[1]}, {h}, {w}')
     biVal = bilinear_interpolation(startPoint[0], startPoint[1], h, w)
     # Get flow value after interpolation
     biFlow = biVal[4] * flow[int(biVal[0])][int(biVal[2])] + \
@@ -195,36 +203,37 @@ def findFlowValue(equiCurVer, equiVer0, equiVer1, equiVer2, flowVer0, flowVer1, 
         biVal[6] * flow[int(biVal[1])][int(biVal[2])] + \
         biVal[7] * flow[int(biVal[1])][int(biVal[3])]
     # Get flow end point in triangle
-    endPoint = startPoint + biFlow
+    endPoint = startPoint + np.flip(biFlow)
     # Get endpoint lambda in triangle
-    endLambda = cart2bary(flowVer0, flowVer1, flowVer2, endPoint)
+    endLambda = newcart2bary(flowVer0, flowVer1, flowVer2, endPoint)
     # Convert endpoint back into equirectangular
-    endEquiVer = endLambda[0] * equiVer0 + endLambda[1] * equiVer1 + endLambda[2] * equiVer2
+    # endEquiVer = endLambda[0] * equiVer0 + endLambda[1] * equiVer1 + endLambda[2] * equiVer2
+    endEquiVer = bary2equiCoor(imgHeight, imgWidth, cart0, cart1, cart2, endLambda)
     # Calculate flow in equirectangular
-    equiFlow = endEquiVer - equiCurVer
+    equiFlow = np.flip(endEquiVer - equiCurVer)
     return equiFlow
 
 
-def findRectFlowEndPoint(r, c, flow, homography):
-    [h, w] = flow.shape
-    biVal = bilinear_interpolation(r, c, h, w)
-    startPoint = np.array([r, c])
-    # Get flow value at the current position
-    biFlow = biVal[4] * flow[int(biVal[0])][int(biVal[2])] + \
-        biVal[5] * flow[int(biVal[0])][int(biVal[3])] + \
-        biVal[6] * flow[int(biVal[1])][int(biVal[2])] + \
-        biVal[7] * flow[int(biVal[1])][int(biVal[3])]
-    # Get end point in flow
-    endPoint = startPoint + biFlow
-    # Get end point in equi
-    endEquiVer = np.matmul(np.linalg.inv(homography), np.array([endPoint[0], endPoint[1], 1]))
-    return endEquiVer
+# def findRectFlowEndPoint(r, c, flow, homography):
+#     [h, w] = flow.shape
+#     biVal = bilinear_interpolation(r, c, h, w)
+#     startPoint = np.array([r, c])
+#     # Get flow value at the current position
+#     biFlow = biVal[4] * flow[int(biVal[0])][int(biVal[2])] + \
+#         biVal[5] * flow[int(biVal[0])][int(biVal[3])] + \
+#         biVal[6] * flow[int(biVal[1])][int(biVal[2])] + \
+#         biVal[7] * flow[int(biVal[1])][int(biVal[3])]
+#     # Get end point in flow
+#     endPoint = startPoint + biFlow
+#     # Get end point in equi
+#     endEquiVer = np.matmul(np.linalg.inv(homography), np.array([endPoint[0], endPoint[1], 1]))
+#     return endEquiVer
 
 
-def getMidFinalFlow(p, flowSet, triImage, equiVertexArray, triOrientation):
+def getMidFinalFlow(imgHeight, imgWidth, p, flowSet, triImage, equiVertexArray, triOrientation):
     # flipped triangle: [top left, top right, bot, 1, index of images]s
     # non-flipped triangle: [top, bot left, bot right, 0, index of images]
-    curFlow = findFlowValue(p, equiVertexArray[triImage[0]], equiVertexArray[triImage[1]],
+    curFlow = findFlowValue(imgHeight, imgWidth, p, equiVertexArray[triImage[0]], equiVertexArray[triImage[1]],
                             equiVertexArray[triImage[2]], triOrientation[triImage[3]][0],
                             triOrientation[triImage[3]][1], triOrientation[triImage[3]][2],
                             flowSet[1][triImage[4]])
@@ -232,8 +241,10 @@ def getMidFinalFlow(p, flowSet, triImage, equiVertexArray, triOrientation):
 
 
 def getMidVertexArray(h, w):
-    topThi = np.pi / 3
-    botThi = np.pi / 1.5
+    # topThi = np.pi / 3
+    # botThi = np.pi / 1.5
+    topThi = np.pi / 2 - np.arctan(0.5)
+    botThi = np.pi / 2 + np.arctan(0.5)
     intervalTheta = np.pi / 5
     equiVertexArray = np.zeros([13, 2])
     for vIdx in range(6):
