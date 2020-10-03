@@ -82,6 +82,15 @@ def equiCoor2bary(h, w, cart0, cart1, cart2, p):
     return newcart2bary(cart0, cart1, cart2, cartP)
 
 
+def equiCoor2baryALLcart(cart0, cart1, cart2, cartP):
+    d = pointIntersection(cart0, cart1, cart2, cartP)
+    cartP = cartP + cartP * d
+    ###################################
+    # Need to convert is onto the triangle plane
+    ##################################
+    return newcart2bary(cart0, cart1, cart2, cartP)
+
+
 def bary2equiCoor(h, w, cart0, cart1, cart2, endLambda):
     cartP = cart0 * endLambda[0] + cart1 * endLambda[1] + cart2 * endLambda[2]
     cartP = cartP / np.linalg.norm(cartP)

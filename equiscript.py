@@ -84,8 +84,16 @@ filename = 'GTFlow/room1/0001_opticalflow_forward.flo'
 img1gray = cv2.cvtColor(readin1, cv2.COLOR_RGB2GRAY)
 img2gray = cv2.cvtColor(readin2, cv2.COLOR_RGB2GRAY)
 
+triangleNumber = np.load('triangleNumber.npy')
+equiBiValSet = np.load('equiBiValSet.npy')
+equiStartPointSet = np.load('equiStartPointSet.npy')
+triCartSet = np.load('triCartSet.npy', allow_pickle=True)
+triangleFlowSet = np.load('flowSet.npy')
+
 # fff = barymap.equiImg2EquiFlowBary(readin1, readin2)
-fff = barymap.equiImg2EquiFlowBary(img1gray, img2gray)
+# fff = barymap.equiImg2EquiFlowBary(img1gray, img2gray)
+fff = barymap.equiImg2EquiFlowBaryPreprocessed(img1gray, img2gray, triangleNumber, equiBiValSet,
+                                               equiStartPointSet, triCartSet, triangleFlowSet)
 correctedGT = flow_correction(readFlowFile(filename))
 calcf = flow_correction(fff)
 epe = endPointError(correctedGT, calcf)
