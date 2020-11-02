@@ -4,16 +4,47 @@ from scipy.spatial import Delaunay
 from equiprojection import sphere2equi, newcart2bary, equiCoor2bary, equibaryPreProcess, bary2equiCoor
 from visfunction import bilinear_interpolation
 from getflow import getFlowSet, getFlowSetPreProcessed
+from padimage import padimage
 
 
-def equiImg2EquiFlowBaryPreprocessed(img1, img2, triangleNumber,
-                                     equiBiValSet, equiStartPointSet, triCartSet, triangleFlowSet):
+def equi2equi(img1, img2, disflow):
+    flow = disflow.calc(padimage(img1), padimage(img2), None)
+    return flow[:, 240:1200]
+
+
+def equiImg2EquiFlowCubemapPreprocessed(img1, img2, triangleNumber, equiBiValSet, equiStartPointSet,
+                                        triCartSet, triangleFlowSet, disflow):
+    imgHeight, imgWidth = img1.shape[0:2]
+    flowSet = getFlowSetPreProcessed(img1, img2, triangleFlowSet, disflow)
+    ori = np.array([[29, 269], [269, 29], [269, 269]])
+    finalFlow = np.zeros([imgHeight, imgWidth, 2])
+    for row in range(imgHeight):
+        for col in range(imgWidth):
+            equiCurVer = np.array([row, col])
+            index = int(triangleNumber[row, col])
+            curTriCart = triCartSet[index]
+            curFlow = flowSet[index]
+            curBiVal = equiBiValSet[row, col]
+            startPoint = equiStartPointSet[row, col]
+            biFlow = curBiVal[4] * curFlow[int(curBiVal[0])][int(curBiVal[2])] + \
+                curBiVal[5] * curFlow[int(curBiVal[0])][int(curBiVal[3])] + \
+                curBiVal[6] * curFlow[int(curBiVal[1])][int(curBiVal[2])] + \
+                curBiVal[7] * curFlow[int(curBiVal[1])][int(curBiVal[3])]
+            endPoint = startPoint + np.flip(biFlow)
+            endLambda = newcart2bary(ori[0], ori[1], ori[2], endPoint)
+            endEquiVer = bary2equiCoor(imgHeight, imgWidth, curTriCart[0], curTriCart[1], curTriCart[2], endLambda)
+            finalFlow[row, col] = np.flip(endEquiVer - equiCurVer)
+    return finalFlow
+
+
+def equiImg2EquiFlowBaryPreprocessed(img1, img2, triangleNumber, equiBiValSet, equiStartPointSet,
+                                     triCartSet, triangleFlowSet, disflow):
     imgHeight, imgWidth = img1.shape[0:2]
     # triangleNumber = np.load('triangleNumber.npy')
     # equiBiValSet = np.load('equiBiValSet.npy')
     # equiStartPointSet = np.load('equiStartPointSet.npy')
     # triCartSet = np.load('triCartSet.npy', allow_pickle=True)
-    flowSet = getFlowSetPreProcessed(img1, img2, triangleFlowSet)
+    flowSet = getFlowSetPreProcessed(img1, img2, triangleFlowSet, disflow)
     triOrientation = np.array([[[7, 109], [180, 9], [180, 209]],
                                [[8, 9], [8, 209], [181, 109]]])
     finalFlow = np.zeros([imgHeight, imgWidth, 2])
@@ -35,7 +66,7 @@ def equiImg2EquiFlowBaryPreprocessed(img1, img2, triangleNumber,
                 curBiVal[7] * curFlow[int(curBiVal[1])][int(curBiVal[3])]
             endPoint = startPoint + np.flip(biFlow)
             endLambda = newcart2bary(ori[0], ori[1], ori[2], endPoint)
-            endEquiVer = bary2equiCoor(imgHeight, imgWidth, curTriCart[0], curTriCart[1], curTriCart[2],endLambda)
+            endEquiVer = bary2equiCoor(imgHeight, imgWidth, curTriCart[0], curTriCart[1], curTriCart[2], endLambda)
             finalFlow[row, col] = np.flip(endEquiVer - equiCurVer)
     return finalFlow
 

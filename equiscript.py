@@ -5,10 +5,11 @@ from scipy.spatial import Delaunay
 from topimage import topImageFlow
 from midimage import midImageFlow
 from botimage import botImageFlow
-from evalution import endPointError, flow_correction, angularError, frameInterpolation
+from evalution import endPointError, flow_correction, angularError,\
+    frameInterpolation, sphericalEndPointError, sphericalAugularError
 import barymap
 import flow_vis as fv
-from flowio import readFlowFile
+from flowio import readFlowFile, writeFlowFile
 
 # vertex = np.array([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [0.5, 1], [1.5, 1], [2.5, 1], [3.5, 1], [4.5, 1]])
 # tri = Delaunay(vertex)
@@ -80,26 +81,43 @@ readin2 = cv2.imread("GTFlow/hotel/0002_rgb.jpg")
 # for idx, f in enumerate(botflow):
 #     cv2.imwrite(f"{dirName}bot{idx}.jpg", fv.flow_to_color(botflow[idx]))
 #
-filename = 'GTFlow/room1/0001_opticalflow_forward.flo'
+filename = 'GTFlow/hotel/0001_opticalflow_forward.flo'
 img1gray = cv2.cvtColor(readin1, cv2.COLOR_RGB2GRAY)
 img2gray = cv2.cvtColor(readin2, cv2.COLOR_RGB2GRAY)
 
-triangleNumber = np.load('triangleNumber.npy')
-equiBiValSet = np.load('equiBiValSet.npy')
-equiStartPointSet = np.load('equiStartPointSet.npy')
-triCartSet = np.load('triCartSet.npy', allow_pickle=True)
-triangleFlowSet = np.load('flowSet.npy')
+# triangleNumber = np.load('triangleNumber.npy')
+# equiBiValSet = np.load('equiBiValSet.npy')
+# equiStartPointSet = np.load('equiStartPointSet.npy')
+# triCartSet = np.load('triCartSet.npy', allow_pickle=True)
+# triangleFlowSet = np.load('flowSet.npy')
 
+cubemapNumber = np.load('cubemapNumber.npy')
+equiCubemapBiValSet = np.load('equiCubemapBiValSet.npy')
+equiCubemapStartPointSet = np.load('equiCubemapStartPointSet.npy')
+cubemapCartSet = np.load('cubemapCartSet.npy', allow_pickle=True)
+cubemapFlowSet = np.load('cubemapFlowSet.npy')
+
+disflow = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+
+# fff = disflow.calc(img1gray, img2gray, None)
 # fff = barymap.equiImg2EquiFlowBary(readin1, readin2)
 # fff = barymap.equiImg2EquiFlowBary(img1gray, img2gray)
-fff = barymap.equiImg2EquiFlowBaryPreprocessed(img1gray, img2gray, triangleNumber, equiBiValSet,
-                                               equiStartPointSet, triCartSet, triangleFlowSet)
-correctedGT = flow_correction(readFlowFile(filename))
-calcf = flow_correction(fff)
-epe = endPointError(correctedGT, calcf)
-ae = angularError(correctedGT, calcf)
-print(epe)
-print(ae)
-cv2.imwrite("testout/aaaaaa.jpg", fv.flow_to_color(fff))
-out = frameInterpolation(fff, readin1)
-cv2.imwrite("testout/abcdefg.jpg", out)
+# fff = barymap.equiImg2EquiFlowBaryPreprocessed(img1gray, img2gray, triangleNumber, equiBiValSet,
+#                                                equiStartPointSet, triCartSet, triangleFlowSet, disflow)
+# fff = barymap.equiImg2EquiFlowCubemapPreprocessed(img1gray, img2gray, cubemapNumber, equiCubemapBiValSet,
+#                                                   equiCubemapStartPointSet, cubemapCartSet, cubemapFlowSet, disflow)
+fff = readFlowFile('icosahedron/hotel/0001.flo')
+# correctedGT = flow_correction(readFlowFile(filename))
+# calcf = flow_correction(fff)
+# epe = endPointError(correctedGT, calcf)
+# ae = angularError(correctedGT, calcf)
+# sepe = sphericalEndPointError(correctedGT, calcf)
+# sae = sphericalAugularError(correctedGT, calcf)
+# print(epe)
+# print(ae)
+# print(sepe)
+# print(sae)
+# cv2.imwrite("testout/aaaaaa.jpg", fv.flow_to_color(fff))
+out = frameInterpolation(fff, img2gray)
+cv2.imwrite("testout/img2gray.jpg", out)
+# writeFlowFile(fff, 'testout/test.flo')

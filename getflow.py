@@ -6,12 +6,12 @@ from midimage import midImageFlow
 from botimage import botImageFlow
 
 
-def getFlowSetPreProcessed(img1, img2, triangleFlowSet):
+def getFlowSetPreProcessed(img1, img2, triangleFlowSet, disflow):
     # triangleFlowSet = np.load('flowSet.npy')
-    disflow = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
-    flowHeight, flowWidth = triangleFlowSet.shape[1:3]
+    # disflow = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+    flowsetSize, flowHeight, flowWidth = triangleFlowSet.shape[0:3]
     flowSet = list()
-    for flowIdx in range(20):
+    for flowIdx in range(flowsetSize):
         triangleFlow = triangleFlowSet[flowIdx]
         curImg1 = np.zeros([flowHeight, flowWidth])
         curImg2 = np.zeros([flowHeight, flowWidth])
@@ -30,6 +30,8 @@ def getFlowSetPreProcessed(img1, img2, triangleFlowSet):
         # print(curImg1.shape)
         curImg1uint8 = np.uint8(curImg1)
         curImg2uint8 = np.uint8(curImg2)
+        # cv2.imwrite(f'cubemap/{flowIdx}first.jpg', curImg1uint8)
+        # cv2.imwrite(f'cubemap/{flowIdx}second.jpg', curImg2uint8)
         curFlow = disflow.calc(curImg1uint8, curImg2uint8, None)
         flowSet.append(curFlow)
     return flowSet
