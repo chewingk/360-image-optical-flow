@@ -1,4 +1,4 @@
-##Import dependencies
+## Import dependencies
 ```
 import numpy as np
 import cv2
@@ -9,21 +9,21 @@ from padimage import padimage
 from barymap import equiImg2EquiFlowBaryPreprocessed, equiImg2EquiFlowCubemapPreprocessed, equi2equi
 ```
 
-##Create DISOpticalFlow instance
+## Create DISOpticalFlow instance
 Mode can be ULTRAFAST, FAST or MEDIUM.
 ```
 disflow = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
 ```
-###Read in two images from ```$IMG1_PATH``` and ```$IMG2_PATH```, then convert to grayscale value.
+### Read in two images from ```$IMG1_PATH``` and ```$IMG2_PATH```, then convert to grayscale value.
 ```
 img1_gray = cv2.cvtColor(cv2.imread($IMG1_PATH), cv2.COLOR_RGB2GRAY)
 img2_gray = cv2.cvtColor(cv2.imread($IMG2_PATH), cv2.COLOR_RGB2GRAY)
 ```
-##Equirectanglar Projection
+## Equirectanglar Projection
 ```
 flow = equi2equi(img1_gray, img2_gray, disflow)
 ```
-##Cubemap Projection
+## Cubemap Projection
 Run first line of code in a terminal (it pre-compute some arrays and saves as .npy files.), and the rest in Python
 ```
 python cubemapPrePro.py
@@ -37,7 +37,7 @@ cubemapFlowSet = np.load('cubemapFlowSet.npy')
 flow = equiImg2EquiFlowCubemapPreprocessed(img1_gray, img2_gray, cubemapNumber, equiCubemapBiValSet,
                                            equiCubemapStartPointSet, cubemapCartSet, cubemapFlowSet, disflow)
 ```
-##Icosahedron Projection
+## Icosahedron Projection
 Run first line of code in a terminal (it pre-compute some arrays and saves as .npy files.), and the rest in Python
 ```
 python icosahedronPrePro.py
@@ -52,28 +52,28 @@ disflow = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
 flow = equiImg2EquiFlowBaryPreprocessed(img1_gray, img2_gray, triangleNumber, equiBiValSet,
                                         equiStartPointSet, triCartSet, triangleFlowSet, disflow)
 ```
-##Fix flow to avoid large flows
+## Fix flow to avoid large flows
 ```
 flow_correction(flow)
 ```
-##Compare 2 flows ```$FLOW1``` and ```$FLOW2```
-###EPE
+## Compare 2 flows ```$FLOW1``` and ```$FLOW2```
+### EPE
 ```
 epe = endPointError($FLOW1, $FLOW2)
 ```
-###AE
+### AE
 ```
 ae = angularError($FLOW1, $FLOW2)
 ```
-###GCD
+### GCD
 ```
 gcd = sphericalEndPointError($FLOW1, $FLOW2)
 ```
-###SAE
+### SAE
 ```
 sae = sphericalAugularError($FLOW1, $FLOW2)
 ```
-###FIE
+### FIE
 Flow from ```img1_gray``` to ```img2_gray```, use ```flow``` and ```img2_gray``` we can get an estimated\interpolated ```img1_gray```.
 ```
 int_img1_gray = frameInterpolation(flow, img2_gray)
